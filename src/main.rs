@@ -9,21 +9,24 @@ use sfml::window::{Event, Key, Style};
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 400;
 
-const N_VERTICES: usize = 2_usize.pow(8);
+const N_VERTICES: usize = 2_usize.pow(7);
 const QUERY_BOX_HALF_LENGTH: f32 = 20.;
 
 fn main() {
-    let mut velocities = [Vector2f::new(thread_rng().gen_range(-1.0..1.0), thread_rng().gen_range(-1.0..1.0)); N_VERTICES];
+    let mut velocities = [Vector2f::default(); N_VERTICES];
     let mut vertices = [Vertex::default(); N_VERTICES];
-    vertices.iter_mut().for_each(|v| {
-        v.position.x = thread_rng().gen_range(0.0..WIDTH as f32);
-        v.position.y = thread_rng().gen_range(0.0..HEIGHT as f32);
+    vertices.iter_mut().zip(velocities.iter_mut()).for_each(|(ver, vel)| {
+        ver.position.x = thread_rng().gen_range(0.0..WIDTH as f32);
+        ver.position.y = thread_rng().gen_range(0.0..HEIGHT as f32);
+
+        vel.x = thread_rng().gen_range(-1.0..1.0);
+        vel.y = thread_rng().gen_range(-1.0..1.0);
     });
 
     let mut window = RenderWindow::new(
         (WIDTH, HEIGHT),
-        "Quadtree",
-        Style::default(),
+        "QuadTree",
+        Style::DEFAULT,
         &Default::default(),
     );
 
@@ -55,8 +58,8 @@ fn main() {
 
             ver.position += *vel;
 
-            ver.position.x = ver.position.x.abs() % WIDTH as f32;
-            ver.position.y = ver.position.y.abs() % HEIGHT as f32;
+            ver.position.x = (ver.position.x + WIDTH as f32) % WIDTH as f32;
+            ver.position.y = (ver.position.y + HEIGHT as f32) % HEIGHT as f32;
         });
 
         let mut quad_tree = QuadTree::new(WIDTH as f32, HEIGHT as f32);
