@@ -6,25 +6,25 @@ use sfml::graphics::{Color, PrimitiveType, RenderStates, RenderTarget, RenderWin
 use sfml::system::Vector2f;
 use sfml::window::{Event, Key, Style};
 
-const WIDTH: u32 = 800;
-const HEIGHT: u32 = 400;
+const WIDTH: f32 = 800.;
+const HEIGHT: f32 = 400.;
 
-const N_VERTICES: usize = 2_usize.pow(7);
+const N_VERTICES: usize = 2_usize.pow(12);
 const QUERY_BOX_HALF_LENGTH: f32 = 20.;
 
 fn main() {
     let mut velocities = [Vector2f::default(); N_VERTICES];
     let mut vertices = [Vertex::default(); N_VERTICES];
     vertices.iter_mut().zip(velocities.iter_mut()).for_each(|(ver, vel)| {
-        ver.position.x = thread_rng().gen_range(0.0..WIDTH as f32);
-        ver.position.y = thread_rng().gen_range(0.0..HEIGHT as f32);
+        ver.position.x = thread_rng().gen_range((3. * WIDTH / 4.)..WIDTH);
+        ver.position.y = thread_rng().gen_range((3. * HEIGHT / 4.)..HEIGHT);
 
-        vel.x = thread_rng().gen_range(-1.0..1.0);
-        vel.y = thread_rng().gen_range(-1.0..1.0);
+        vel.x = thread_rng().gen_range(-1.0..=1.0);
+        vel.y = thread_rng().gen_range(-1.0..=1.0);
     });
 
     let mut window = RenderWindow::new(
-        (WIDTH, HEIGHT),
+        (WIDTH as u32, HEIGHT as u32),
         "QuadTree",
         Style::DEFAULT,
         &Default::default(),
@@ -38,7 +38,7 @@ fn main() {
                 Event::Closed | Event::KeyPressed { code: Key::Escape, .. } => window.close(),
                 Event::KeyPressed { code: Key::P, .. } => {
                     while let Some(event) = window.wait_event() {
-                        if let Event::KeyReleased { code: Key::P, .. } = event {
+                        if let Event::KeyPressed { code: Key::P, .. } = event {
                             break;
                         }
                     }
@@ -58,11 +58,11 @@ fn main() {
 
             ver.position += *vel;
 
-            ver.position.x = (ver.position.x + WIDTH as f32) % WIDTH as f32;
-            ver.position.y = (ver.position.y + HEIGHT as f32) % HEIGHT as f32;
+            ver.position.x = (ver.position.x + WIDTH) % WIDTH;
+            ver.position.y = (ver.position.y + HEIGHT) % HEIGHT;
         });
 
-        let mut quad_tree = QuadTree::new(WIDTH as f32, HEIGHT as f32);
+        let mut quad_tree = QuadTree::new(WIDTH, HEIGHT);
         vertices.iter().for_each(|v| quad_tree.insert(v));
 
         let mouse_position = window.mouse_position();
