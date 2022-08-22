@@ -145,7 +145,9 @@ impl<'q> Drawable for QuadTree<'q> {
         target: &mut dyn RenderTarget,
         states: &RenderStates<'texture, 'shader, 'shader_texture>,
     ) {
-        self.boundary.draw(target, states);
-        self.children.iter().for_each(|q| q.draw(target, states));
+        if self.children.len() == 4 {
+            self.boundary.draw(target, states);
+            self.children.iter().for_each(|q| q.draw(target, states));
+        }
     }
 }
