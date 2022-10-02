@@ -6,8 +6,8 @@ use sfml::graphics::{Color, PrimitiveType, RenderStates, RenderTarget, RenderWin
 use sfml::system::Vector2f;
 use sfml::window::{Event, Key, Style};
 
-const WIDTH: f32 = 800.;
-const HEIGHT: f32 = 400.;
+const WIDTH: f32 = 1000.;
+const HEIGHT: f32 = 600.;
 
 const N_VERTICES: usize = 2_usize.pow(12);
 const QUERY_BOX_HALF_LENGTH: f32 = 20.;
@@ -30,37 +30,41 @@ fn main() {
         &Default::default(),
     );
 
+    let mut paused = false;
+    let mut draw_tree = true;
+    let mut draw_vertices = true;
+    let mut draw_query_box = false;
+
     window.set_framerate_limit(60);
     while window.is_open() {
         // event loop
         while let Some(event) = window.poll_event() {
             match event {
                 Event::Closed | Event::KeyPressed { code: Key::Escape, .. } => window.close(),
-                Event::KeyPressed { code: Key::P, .. } => {
-                    while let Some(event) = window.wait_event() {
-                        if let Event::KeyPressed { code: Key::P, .. } = event {
-                            break;
-                        }
-                    }
-                }
+                Event::KeyPressed { code: Key::P, .. } => paused = !paused,
+                Event::KeyPressed { code: Key::T, .. } => draw_tree = !draw_tree,
+                Event::KeyPressed { code: Key::V, .. } => draw_vertices = !draw_vertices,
+                Event::KeyPressed { code: Key::Q, .. } => draw_query_box = !draw_query_box,
                 _ => {}
             }
         }
 
-        // tick
-        vertices.iter_mut().zip(velocities.iter_mut()).for_each(|(ver, vel)| {
-            let angle: f32 = thread_rng().gen_range(-0.25..0.25);
-            let (angle_sin, angle_cos) = angle.sin_cos();
+        if !paused {
+            // tick
+            vertices.iter_mut().zip(velocities.iter_mut()).for_each(|(ver, vel)| {
+                let angle: f32 = thread_rng().gen_range(-0.25..0.25);
+                let (angle_sin, angle_cos) = angle.sin_cos();
 
-            let (vel_x, vel_y) = (vel.x, vel.y);
-            vel.x = vel_x * angle_cos - vel_y * angle_sin;
-            vel.y = vel_x * angle_sin + vel_y * angle_cos;
+                let (vel_x, vel_y) = (vel.x, vel.y);
+                vel.x = vel_x * angle_cos - vel_y * angle_sin;
+                vel.y = vel_x * angle_sin + vel_y * angle_cos;
 
-            ver.position += *vel;
+                ver.position += *vel;
 
-            ver.position.x = (ver.position.x + WIDTH) % WIDTH;
-            ver.position.y = (ver.position.y + HEIGHT) % HEIGHT;
-        });
+                ver.position.x = (ver.position.x + WIDTH) % WIDTH;
+                ver.position.y = (ver.position.y + HEIGHT) % HEIGHT;
+            });
+        }
 
         let mut quad_tree = QuadTree::new(WIDTH, HEIGHT);
         vertices.iter().for_each(|v| quad_tree.insert(v));
@@ -83,20 +87,28 @@ fn main() {
 
         // rendering
         window.clear(Color::BLACK);
-        window.draw_primitives(&vertices, PrimitiveType::POINTS, &RenderStates::DEFAULT);
-        window.draw_primitives(vertices_in_query_box, PrimitiveType::POINTS, &RenderStates::DEFAULT);
-        window.draw_primitives(
-            &[
-                Vertex::with_pos_color(Vector2f::new(mouse_x - QUERY_BOX_HALF_LENGTH, mouse_y - QUERY_BOX_HALF_LENGTH), Color::RED),
-                Vertex::with_pos_color(Vector2f::new(mouse_x + QUERY_BOX_HALF_LENGTH, mouse_y - QUERY_BOX_HALF_LENGTH), Color::RED),
-                Vertex::with_pos_color(Vector2f::new(mouse_x + QUERY_BOX_HALF_LENGTH, mouse_y + QUERY_BOX_HALF_LENGTH), Color::RED),
-                Vertex::with_pos_color(Vector2f::new(mouse_x - QUERY_BOX_HALF_LENGTH, mouse_y + QUERY_BOX_HALF_LENGTH), Color::RED),
-                Vertex::with_pos_color(Vector2f::new(mouse_x - QUERY_BOX_HALF_LENGTH, mouse_y - QUERY_BOX_HALF_LENGTH), Color::RED),
-            ],
-            PrimitiveType::LINE_STRIP,
-            &RenderStates::DEFAULT,
-        );
-        window.draw(&quad_tree);
+
+        if draw_vertices {
+            window.draw_primitives(&vertices, PrimitiveType::POINTS, &RenderStates::DEFAULT);
+            window.draw_primitives(vertices_in_query_box, PrimitiveType::POINTS, &RenderStates::DEFAULT);
+        }
+
+        if draw_query_box {
+            window.draw_primitives(
+                &[
+                    Vertex::with_pos_color(Vector2f::new(mouse_x - QUERY_BOX_HALF_LENGTH, mouse_y - QUERY_BOX_HALF_LENGTH), Color::RED),
+                    Vertex::with_pos_color(Vector2f::new(mouse_x + QUERY_BOX_HALF_LENGTH, mouse_y - QUERY_BOX_HALF_LENGTH), Color::RED),
+                    Vertex::with_pos_color(Vector2f::new(mouse_x + QUERY_BOX_HALF_LENGTH, mouse_y + QUERY_BOX_HALF_LENGTH), Color::RED),
+                    Vertex::with_pos_color(Vector2f::new(mouse_x - QUERY_BOX_HALF_LENGTH, mouse_y + QUERY_BOX_HALF_LENGTH), Color::RED),
+                    Vertex::with_pos_color(Vector2f::new(mouse_x - QUERY_BOX_HALF_LENGTH, mouse_y - QUERY_BOX_HALF_LENGTH), Color::RED),
+                ],
+                PrimitiveType::LINE_STRIP,
+                &RenderStates::DEFAULT,
+            );
+        }
+
+        if draw_tree { window.draw(&quad_tree); }
+
         window.display();
     }
 }
