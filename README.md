@@ -9,6 +9,7 @@ Made using [Rust SFML](https://github.com/jeremyletang/rust-sfml)
 ## Buttons
 
 * P - Pause
-* T - Toggle draw tree
-* V - Toggle draw vertices
-* Q - Toggle draw query box
+* T - Toggle tree rendering
+* V - Toggle vertex rendering
+* Q - Toggle query box rendering
+* S - Toggle searched node highlighting

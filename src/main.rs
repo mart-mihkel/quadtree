@@ -13,6 +13,7 @@ const N_VERTICES: usize = 2_usize.pow(12);
 const QUERY_BOX_HALF_LENGTH: f32 = 20.;
 
 fn main() {
+    // initial positions and velocities
     let mut velocities = [Vector2f::default(); N_VERTICES];
     let mut vertices = [Vertex::default(); N_VERTICES];
     vertices.iter_mut().zip(velocities.iter_mut()).for_each(|(ver, vel)| {
@@ -25,15 +26,17 @@ fn main() {
 
     let mut window = RenderWindow::new(
         (WIDTH as u32, HEIGHT as u32),
-        "QuadTree",
+        "Quad tree",
         Style::DEFAULT,
         &Default::default(),
     );
 
+    // rendering options
     let mut paused = false;
     let mut draw_tree = true;
     let mut draw_vertices = true;
     let mut draw_query_box = false;
+    let mut draw_searched = false;
 
     window.set_framerate_limit(60);
     while window.is_open() {
@@ -45,12 +48,13 @@ fn main() {
                 Event::KeyPressed { code: Key::T, .. } => draw_tree = !draw_tree,
                 Event::KeyPressed { code: Key::V, .. } => draw_vertices = !draw_vertices,
                 Event::KeyPressed { code: Key::Q, .. } => draw_query_box = !draw_query_box,
+                Event::KeyPressed { code: Key::S, .. } => draw_searched = !draw_searched,
                 _ => {}
             }
         }
 
+        // tick
         if !paused {
-            // tick
             vertices.iter_mut().zip(velocities.iter_mut()).for_each(|(ver, vel)| {
                 let angle: f32 = thread_rng().gen_range(-0.25..0.25);
                 let (angle_sin, angle_cos) = angle.sin_cos();
@@ -66,7 +70,7 @@ fn main() {
             });
         }
 
-        let mut quad_tree = QuadTree::new(WIDTH, HEIGHT);
+        let mut quad_tree = QuadTree::new(WIDTH, HEIGHT, draw_searched);
         vertices.iter().for_each(|v| quad_tree.insert(v));
 
         let mouse_position = window.mouse_position();
