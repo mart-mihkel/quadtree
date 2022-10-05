@@ -1,6 +1,6 @@
 mod data_structures;
 
-use crate::data_structures::{QuadTree, QuadTreeBoundary};
+use crate::data_structures::QuadTree;
 use rand::{thread_rng, Rng};
 use sfml::graphics::{Color, PrimitiveType, RenderStates, RenderTarget, RenderWindow, Vertex};
 use sfml::system::Vector2f;
@@ -10,7 +10,7 @@ const WIDTH: f32 = 1000.;
 const HEIGHT: f32 = 600.;
 
 const N_VERTICES: usize = 2_usize.pow(12);
-const QUERY_BOX_HALF_LENGTH: f32 = 20.;
+const LOOKUP_RADIUS: f32 = 25.;
 
 fn main() {
     // initial positions and velocities
@@ -26,7 +26,7 @@ fn main() {
 
     let mut window = RenderWindow::new(
         (WIDTH as u32, HEIGHT as u32),
-        "Quad tree",
+        "quadtree",
         Style::DEFAULT,
         &Default::default(),
     );
@@ -35,8 +35,7 @@ fn main() {
     let mut paused = false;
     let mut draw_tree = true;
     let mut draw_vertices = true;
-    let mut draw_query_box = false;
-    let mut draw_searched = false;
+    let mut highlight_searched = false;
 
     window.set_framerate_limit(60);
     while window.is_open() {
@@ -47,8 +46,7 @@ fn main() {
                 Event::KeyPressed { code: Key::P, .. } => paused = !paused,
                 Event::KeyPressed { code: Key::T, .. } => draw_tree = !draw_tree,
                 Event::KeyPressed { code: Key::V, .. } => draw_vertices = !draw_vertices,
-                Event::KeyPressed { code: Key::Q, .. } => draw_query_box = !draw_query_box,
-                Event::KeyPressed { code: Key::S, .. } => draw_searched = !draw_searched,
+                Event::KeyPressed { code: Key::H, .. } => highlight_searched = !highlight_searched,
                 _ => {}
             }
         }
@@ -70,45 +68,26 @@ fn main() {
             });
         }
 
-        let mut quad_tree = QuadTree::new(WIDTH, HEIGHT, draw_searched);
+        let mut quad_tree = QuadTree::new(WIDTH, HEIGHT, highlight_searched);
         vertices.iter().for_each(|v| quad_tree.insert(v));
 
         let mouse_position = window.mouse_position();
         let (mouse_x, mouse_y) = (mouse_position.x as f32, mouse_position.y as f32);
-        let query_box = QuadTreeBoundary::new(
-            mouse_x - QUERY_BOX_HALF_LENGTH,
-            mouse_y - QUERY_BOX_HALF_LENGTH,
-            mouse_x + QUERY_BOX_HALF_LENGTH,
-            mouse_y + QUERY_BOX_HALF_LENGTH,
-        );
 
-        let vertices_in_query_box = quad_tree
-            .query(&query_box)
+        let mut vertices_in_radius = Vec::new();
+        quad_tree.lookup(mouse_x, mouse_y, LOOKUP_RADIUS, &mut vertices_in_radius);
+
+        let vertices_in_radius = vertices_in_radius
             .iter()
-            .map(|v| Vertex::with_pos_color(v.position, Color::RED))
+            .map(|v| Vertex::with_pos_color(Vector2f::new(v.position.x, v.position.y), Color::rgb(255, 60, 0)))
             .collect::<Vec<Vertex>>();
-        let vertices_in_query_box = vertices_in_query_box.as_slice();
 
         // rendering
         window.clear(Color::BLACK);
 
         if draw_vertices {
             window.draw_primitives(&vertices, PrimitiveType::POINTS, &RenderStates::DEFAULT);
-            window.draw_primitives(vertices_in_query_box, PrimitiveType::POINTS, &RenderStates::DEFAULT);
-        }
-
-        if draw_query_box {
-            window.draw_primitives(
-                &[
-                    Vertex::with_pos_color(Vector2f::new(mouse_x - QUERY_BOX_HALF_LENGTH, mouse_y - QUERY_BOX_HALF_LENGTH), Color::RED),
-                    Vertex::with_pos_color(Vector2f::new(mouse_x + QUERY_BOX_HALF_LENGTH, mouse_y - QUERY_BOX_HALF_LENGTH), Color::RED),
-                    Vertex::with_pos_color(Vector2f::new(mouse_x + QUERY_BOX_HALF_LENGTH, mouse_y + QUERY_BOX_HALF_LENGTH), Color::RED),
-                    Vertex::with_pos_color(Vector2f::new(mouse_x - QUERY_BOX_HALF_LENGTH, mouse_y + QUERY_BOX_HALF_LENGTH), Color::RED),
-                    Vertex::with_pos_color(Vector2f::new(mouse_x - QUERY_BOX_HALF_LENGTH, mouse_y - QUERY_BOX_HALF_LENGTH), Color::RED),
-                ],
-                PrimitiveType::LINE_STRIP,
-                &RenderStates::DEFAULT,
-            );
+            window.draw_primitives(vertices_in_radius.as_slice(), PrimitiveType::POINTS, &RenderStates::DEFAULT);
         }
 
         if draw_tree { window.draw(&quad_tree); }

@@ -2,31 +2,32 @@ use sfml::graphics::{Color, Drawable, PrimitiveType, RenderStates, RenderTarget,
 use sfml::system::Vector2f;
 
 const CAPACITY: usize = 5;
+const SEARCHED_COLOR: Color = Color::rgba(255, 60, 0, 64);
 
 pub struct QuadTreeBoundary {
     left_x: f32,
     top_y: f32,
     right_x: f32,
     bottom_y: f32,
-    searched: bool,
+    been_searched: bool,
 }
 
 impl QuadTreeBoundary {
     pub fn new(left_x: f32, top_y: f32, right_x: f32, bottom_y: f32) -> Self {
-        let searched = false;
+        let been_searched = false;
 
-        Self { left_x, top_y, right_x, bottom_y, searched }
+        Self { left_x, top_y, right_x, bottom_y, been_searched }
     }
 
     pub fn contains(&self, point: &Vertex) -> bool {
-        point.position.x >= self.left_x &&
-            point.position.x <= self.right_x &&
-            point.position.y >= self.top_y &&
-            point.position.y <= self.bottom_y
+        point.position.x >= self.left_x && point.position.x <= self.right_x && point.position.y >= self.top_y && point.position.y <= self.bottom_y
     }
 
-    pub fn intersects(&self, other: &QuadTreeBoundary) -> bool {
-        self.left_x <= other.right_x && self.right_x >= other.left_x && self.top_y <= other.bottom_y && self.bottom_y >= other.top_y
+    pub fn overlaps(&self, x: f32, y: f32, r: f32) -> bool {
+        let x_distance = x - x.max(self.left_x).min(self.right_x);
+        let y_distance = y - y.max(self.top_y).min(self.bottom_y);
+
+        return x_distance.powf(2.) + y_distance.powf(2.) <= r.powf(2.);
     }
 }
 
@@ -39,25 +40,13 @@ impl Drawable for QuadTreeBoundary {
         let centre_x = (self.right_x + self.left_x) / 2.;
         let centre_y = (self.bottom_y + self.top_y) / 2.;
 
-        if self.searched {
+        if self.been_searched {
             target.draw_primitives(
                 &[
-                    Vertex::with_pos_color(
-                        Vector2f::new(self.left_x, self.top_y),
-                        Color::rgba(255, 0, 0, 32),
-                    ),
-                    Vertex::with_pos_color(
-                        Vector2f::new(self.right_x, self.top_y),
-                        Color::rgba(255, 0, 0, 32),
-                    ),
-                    Vertex::with_pos_color(
-                        Vector2f::new(self.right_x, self.bottom_y),
-                        Color::rgba(255, 0, 0, 32),
-                    ),
-                    Vertex::with_pos_color(
-                        Vector2f::new(self.left_x, self.bottom_y),
-                        Color::rgba(255, 0, 0, 32),
-                    ),
+                    Vertex::with_pos_color(Vector2f::new(self.left_x, self.top_y), SEARCHED_COLOR),
+                    Vertex::with_pos_color(Vector2f::new(self.right_x, self.top_y), SEARCHED_COLOR),
+                    Vertex::with_pos_color(Vector2f::new(self.right_x, self.bottom_y), SEARCHED_COLOR),
+                    Vertex::with_pos_color(Vector2f::new(self.left_x, self.bottom_y), SEARCHED_COLOR),
                 ],
                 PrimitiveType::QUADS,
                 states,
@@ -89,7 +78,7 @@ impl<'q> QuadTree<'q> {
         Self::new_with_boundary(QuadTreeBoundary::new(0., 0., width, height), draw_searched)
     }
 
-    pub fn new_with_boundary(boundary: QuadTreeBoundary, draw_searched: bool) -> Self {
+    fn new_with_boundary(boundary: QuadTreeBoundary, draw_searched: bool) -> Self {
         let items = Vec::with_capacity(CAPACITY);
         let children = Vec::with_capacity(4);
 
@@ -110,23 +99,18 @@ impl<'q> QuadTree<'q> {
         }
     }
 
-    pub fn query(&mut self, area: &QuadTreeBoundary) -> Vec<&Vertex> {
-        let mut items_in_area = Vec::new();
-        self.query_with_vec(area, &mut items_in_area);
-
-        items_in_area
-    }
-
-    fn query_with_vec(&mut self, area: &QuadTreeBoundary, items_in_area: &mut Vec<&'q Vertex>) {
-        if self.boundary.intersects(area) {
-            self.boundary.searched = self.draw_searched;
+    pub fn lookup(&mut self, x: f32, y: f32, r: f32, items_in_area: &mut Vec<&'q Vertex>) {
+        if self.boundary.overlaps(x, y, r) {
+            self.boundary.been_searched = self.draw_searched;
 
             self.items
                 .iter()
-                .filter(|v| area.contains(v))
+                .filter(|v| (v.position.x - x).powf(2.) + (v.position.y - y).powf(2.) <= r.powf(2.))
                 .for_each(|v| items_in_area.push(v));
 
-            self.children.iter_mut().for_each(|q| q.query_with_vec(area, items_in_area));
+            self.children
+                .iter_mut()
+                .for_each(|q| q.lookup(x, y, r, items_in_area));
         }
     }
 
