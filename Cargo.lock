@@ -113,9 +113,9 @@ dependencies = [
 
 [[package]]
 name = "sfml"
-version = "0.17.0"
+version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e02d4b02dfcc680f12ff19d1b319be7d593336a1604ede362d7a8c6c2ba4420f"
+checksum = "4a02fe31a239a21ee78ca0f41b5314ee61b32a6f24463959afbb46aaf9c4b16a"
 dependencies = [
  "bitflags",
  "cc",
